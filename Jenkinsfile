@@ -4,6 +4,7 @@ pipeline {
     environment {
         // Reference the Jenkins credential ID for the Snyk token
         SNYK_TOKEN = credentials('snyk-token')
+	echo 'token captured'
     }
 
     stages {
