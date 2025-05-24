@@ -1,20 +1,43 @@
 pipeline {
     agent any
 
+    environment {
+        // Reference the Jenkins credential ID for the Snyk token
+        SNYK_TOKEN = credentials('snyk-token')
+    }
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo 'Building the project...'
-                // Add build commands here, e.g.:
-                // sh 'mvn clean package'  (if using Maven)
+                checkout scm
             }
         }
-        stage('Test') {
+
+        stage('Build') {
             steps {
-                echo 'Running tests...'
-                // Add test commands here, e.g.:
-                // sh 'mvn test'
+                // Assuming you are using Maven for Java build
+                sh 'mvn clean package'
             }
+        }
+
+        stage('Snyk Scan') {
+            steps {
+                // Authenticate Snyk CLI and run scan
+                sh 'snyk auth $SNYK_TOKEN'
+                sh 'snyk test --all-projects'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished.'
+        }
+        success {
+            echo 'Build and scan successful!'
+        }
+        failure {
+            echo 'Build or scan failed.'
         }
     }
 }
