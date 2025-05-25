@@ -67,7 +67,9 @@ pipeline {
                             dir(project) {
                                 // Fail build if vulnerabilities found (snyk exits non-zero)
                                 try {
-                                    sh 'snyk test'
+                                    sh 'snyk test --all-projects'
+				    sh 'snyk monitor --org=bramarika-me76zkSKhDZ8RmPSSswweu'
+				    sh 'snyk monitor --all-projects --debug'
                                 } catch (Exception e) {
                                     error("Snyk scan failed for ${project} - vulnerabilities found")
                                 }
