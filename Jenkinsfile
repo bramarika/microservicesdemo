@@ -1,6 +1,8 @@
 pipeline {
     agent any
-
+    tools {
+        maven 'M3' // Make sure 'M3' matches what you named it in Jenkins UI
+    }
     environment {
         // Reference the Jenkins credential ID for the Snyk token
         SNYK_TOKEN = credentials('snyk-token')
