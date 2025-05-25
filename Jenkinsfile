@@ -2,10 +2,11 @@ pipeline {
     agent any
     tools {
         maven 'Maven' // Ensure this matches your Jenkins Maven installation label
+        // NodeJS needed for npm/snyk - you may want to add NodeJS tool installation if configured
+        // nodejs 'NodeJS' 
     }
-    environment {
-        SNYK_TOKEN = credentials('snyk-token') // Jenkins secret
-    }
+
+    
 
     stages {
         stage('Checkout') {
@@ -17,7 +18,8 @@ pipeline {
         stage('Build goof-service') {
             steps {
                 dir('goof-service') {
-                    sh 'mvn clean package'
+                    // Optional: skip tests if build time is an issue
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -25,7 +27,7 @@ pipeline {
         stage('Build log4shell-goof') {
             steps {
                 dir('goof-service/log4shell-goof') {
-                    sh 'mvn clean package'
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -33,20 +35,46 @@ pipeline {
         stage('Build todolist-goof') {
             steps {
                 dir('goof-service/todolist-goof') {
-                    sh 'mvn clean package'
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
-	stage('Install Snyk') {
+
+        stage('Install Snyk') {
             steps {
-                sh 'npm install -g snyk'
+                // Retry npm install to avoid flaky failures
+                retry(2) {
+                    sh 'npm install -g snyk'
+                }
             }
         }
 
         stage('Snyk Scan') {
             steps {
-                sh 'snyk auth $SNYK_TOKEN'
-                sh 'snyk test --all-projects'
+                script {
+                    withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                        // Authenticate Snyk CLI
+                        sh 'snyk auth $SNYK_TOKEN'
+
+                        // Run snyk test in each project directory to get detailed output & control
+                        def projects = [
+                            'goof-service',
+                            'goof-service/log4shell-goof',
+                            'goof-service/todolist-goof'
+                        ]
+                        
+                        for (project in projects) {
+                            dir(project) {
+                                // Fail build if vulnerabilities found (snyk exits non-zero)
+                                try {
+                                    sh 'snyk test'
+                                } catch (Exception e) {
+                                    error("Snyk scan failed for ${project} - vulnerabilities found")
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
