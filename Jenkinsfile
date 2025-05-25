@@ -1,12 +1,10 @@
 pipeline {
     agent any
     tools {
-        maven 'Maven' // Make sure 'M3' matches what you named it in Jenkins UI
+        maven 'Maven' // Ensure this matches your Jenkins Maven installation label
     }
     environment {
-        // Reference the Jenkins credential ID for the Snyk token
-        SNYK_TOKEN = credentials('snyk-token')
-	
+        SNYK_TOKEN = credentials('snyk-token') // Jenkins secret
     }
 
     stages {
@@ -16,16 +14,32 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build goof-service') {
             steps {
-                // Assuming you are using Maven for Java build
-                sh 'mvn clean package'
+                dir('goof-service') {
+                    sh 'mvn clean package'
+                }
+            }
+        }
+
+        stage('Build log4shell-goof') {
+            steps {
+                dir('goof-service/log4shell-goof') {
+                    sh 'mvn clean package'
+                }
+            }
+        }
+
+        stage('Build todolist-goof') {
+            steps {
+                dir('goof-service/todolist-goof') {
+                    sh 'mvn clean package'
+                }
             }
         }
 
         stage('Snyk Scan') {
             steps {
-                // Authenticate Snyk CLI and run scan
                 sh 'snyk auth $SNYK_TOKEN'
                 sh 'snyk test --all-projects'
             }
